@@ -27,6 +27,13 @@ export function cosineSimilarity(vecA: number[], vecB: number[]): number {
   return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
 }
 
+const STOP_WORDS = new Set([
+  'explain', 'what', 'how', 'why', 'when', 'where', 'which', 'who', 'describe', 'tell',
+  'about', 'test', 'strict', 'refusal', 'please', 'help', 'give', 'does', 'with', 'from',
+  'that', 'this', 'then', 'than', 'into', 'over', 'under', 'more', 'most', 'some', 'the',
+  'and', 'for', 'are', 'was', 'were', 'can', 'could', 'should', 'would', 'is'
+]);
+
 // Fast lexical + semantic chunk matching for RAG
 export function retrieveRelevantChunks(
   query: string,
@@ -36,7 +43,11 @@ export function retrieveRelevantChunks(
 ): { chunk: DocumentChunk; score: number }[] {
   if (!chunks || chunks.length === 0) return [];
 
-  const queryTerms = query.toLowerCase().split(/\W+/).filter((t) => t.length > 2);
+  const rawTerms = query.toLowerCase().split(/\W+/).filter((t) => t.length > 2);
+  const queryTerms = rawTerms.filter((t) => !STOP_WORDS.has(t));
+
+  // If all terms were stop words, return empty
+  if (queryTerms.length === 0) return [];
 
   const scored = chunks
     .filter((c) => !topicFilter || c.metadata.topicTag === topicFilter || c.metadata.topicTag === 'general')
@@ -46,13 +57,18 @@ export function retrieveRelevantChunks(
       let matchScore = 0;
 
       queryTerms.forEach((term) => {
-        if (secLower.includes(term)) matchScore += 3;
-        if (contentLower.includes(term)) matchScore += 1;
+        // Use word boundary to avoid false substring matches like 'strict' inside 'strictly'
+        const regex = new RegExp(`\\b${term}\\b`, 'i');
+        if (regex.test(secLower)) matchScore += 3;
+        if (regex.test(contentLower)) matchScore += 1;
       });
 
-      // Bonus if exact phrase matches
-      if (contentLower.includes(query.toLowerCase().trim())) {
-        matchScore += 5;
+      // Bonus if multi-word phrase matches
+      if (queryTerms.length >= 2) {
+        const phrase = queryTerms.slice(0, 3).join(' ');
+        if (contentLower.includes(phrase)) {
+          matchScore += 5;
+        }
       }
 
       return {
@@ -61,7 +77,9 @@ export function retrieveRelevantChunks(
       };
     });
 
+  // Filter out chunks with 0 score, sort descending, and return topK
   return scored
+    .filter((s) => s.score >= 2)
     .sort((a, b) => b.score - a.score)
     .slice(0, topK);
 }
