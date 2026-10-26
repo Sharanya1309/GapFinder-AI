@@ -185,17 +185,49 @@ export default function GapReportPage() {
               {/* Common Mistakes & Misconceptions */}
               {diagnosis && diagnosis.commonMistakes && diagnosis.commonMistakes.length > 0 && (
                 <div className="space-y-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-rose-700 flex items-center gap-1.5">
-                    <AlertTriangle className="w-3.5 h-3.5" />
-                    <span>Identified Misconceptions & Mistakes</span>
+                  <span
+                    className={`text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 ${
+                      topic.status === 'strong'
+                        ? 'text-emerald-700'
+                        : topic.status === 'medium'
+                        ? 'text-amber-700'
+                        : 'text-rose-700'
+                    }`}
+                  >
+                    {topic.status === 'strong' ? (
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                    ) : (
+                      <AlertTriangle className="w-3.5 h-3.5" />
+                    )}
+                    <span>
+                      {topic.status === 'strong'
+                        ? 'Mastered Concepts & Error Remediation'
+                        : 'Identified Misconceptions & Mistakes'}
+                    </span>
                   </span>
                   <ul className="space-y-1.5 text-xs">
                     {diagnosis.commonMistakes.map((mistake, mIdx) => (
                       <li
                         key={mIdx}
-                        className="flex items-start gap-2 bg-rose-50/50 p-2.5 rounded-lg border border-rose-100 text-rose-900"
+                        className={`flex items-start gap-2 p-2.5 rounded-lg border ${
+                          topic.status === 'strong'
+                            ? 'bg-emerald-50/50 border-emerald-100 text-emerald-900'
+                            : topic.status === 'medium'
+                            ? 'bg-amber-50/50 border-amber-100 text-amber-900'
+                            : 'bg-rose-50/50 border-rose-100 text-rose-900'
+                        }`}
                       >
-                        <span className="font-bold text-rose-500 mt-0.5">•</span>
+                        <span
+                          className={`font-bold mt-0.5 ${
+                            topic.status === 'strong'
+                              ? 'text-emerald-500'
+                              : topic.status === 'medium'
+                              ? 'text-amber-500'
+                              : 'text-rose-500'
+                          }`}
+                        >
+                          •
+                        </span>
                         <span>{mistake}</span>
                       </li>
                     ))}

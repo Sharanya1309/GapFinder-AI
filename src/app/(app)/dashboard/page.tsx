@@ -242,8 +242,8 @@ export default function DashboardPage() {
             <div className="mt-4 rounded-xl bg-indigo-50/70 border border-indigo-100 p-3.5 flex items-start gap-2.5">
               <Sparkles className="w-4 h-4 text-brand-600 flex-shrink-0 mt-0.5" />
               <p className="text-xs text-indigo-900 leading-relaxed">
-                <span className="font-semibold">Sample Course Loaded:</span> Deep Learning (ANN 90%, CNN 40%, RNN 65%, Transformers 80%).
-                These scores reflect baseline diagnostic evidence. As you take new quizzes, GapFinder AI re-evaluates topics deterministically in real time.
+                <span className="font-semibold">Curriculum Diagnostic Evidence:</span> Deep Learning ({topics.map((t) => `${t.shortCode} ${t.status === 'insufficient_data' ? 'Pending' : `${t.latestScore}%`}`).join(', ')}).
+                These scores reflect live diagnostic evidence. As you take new quizzes, GapFinder AI re-evaluates topics deterministically in real time.
               </p>
             </div>
           </div>

@@ -20,6 +20,7 @@ import {
   INITIAL_REVISION_PLAN,
   SAMPLE_RECENT_QUIZZES,
 } from '../demo/sample-data';
+import { processQuizAttemptForTopics } from '../gap-diagnosis/engine';
 
 interface AppContextType {
   user: UserProfile;
@@ -66,13 +67,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const storedDiagnoses = localStorage.getItem(`${STORAGE_KEY_PREFIX}diagnoses`);
       const storedPlan = localStorage.getItem(`${STORAGE_KEY_PREFIX}plan`);
 
+      let loadedTopics: SyllabusTopic[] | null = null;
+      let loadedDiagnoses: TopicDiagnosis[] | null = null;
+
       if (storedUser) setUser(JSON.parse(storedUser));
-      if (storedTopics) setTopics(JSON.parse(storedTopics));
+      if (storedTopics) {
+        loadedTopics = JSON.parse(storedTopics);
+        setTopics(loadedTopics!);
+      }
       if (storedDocs) setDocuments(JSON.parse(storedDocs));
       if (storedChunks) setChunks(JSON.parse(storedChunks));
       if (storedQuizzes) setQuizzes(JSON.parse(storedQuizzes));
-      if (storedDiagnoses) setDiagnoses(JSON.parse(storedDiagnoses));
+      if (storedDiagnoses) {
+        loadedDiagnoses = JSON.parse(storedDiagnoses);
+      }
       if (storedPlan) setRevisionPlan(JSON.parse(storedPlan));
+
+      // Reconcile diagnoses with topics to ensure complete score & status consistency
+      if (loadedTopics && loadedDiagnoses) {
+        const alignedDiagnoses = loadedDiagnoses.map((d) => {
+          const matchingTopic = loadedTopics!.find((t) => t.id === d.topicId);
+          if (matchingTopic) {
+            return {
+              ...d,
+              score: matchingTopic.latestScore,
+              status: matchingTopic.status,
+              questionsAttempted: matchingTopic.questionsAttempted,
+            };
+          }
+          return d;
+        });
+        setDiagnoses(alignedDiagnoses);
+      } else if (loadedDiagnoses) {
+        setDiagnoses(loadedDiagnoses);
+      }
     } catch (e) {
       console.warn('Failed to parse localStorage data:', e);
     } finally {
@@ -132,10 +160,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     mediumMax: number,
     minConfidence: number
   ) => {
+    const newThresholds = { weakMax, mediumMax, minQuestionsForConfidence: minConfidence };
+
     setTopics((prev) =>
       prev.map((t) => {
         if (t.id !== topicId) return t;
-        const newThresholds = { weakMax, mediumMax, minQuestionsForConfidence: minConfidence };
         let newStatus = t.status;
         if (t.questionsAttempted < minConfidence) {
           newStatus = 'insufficient_data';
@@ -149,62 +178,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return { ...t, recommendedThresholds: newThresholds, status: newStatus };
       })
     );
+
+    // Keep diagnoses status and scores perfectly synchronized
+    setDiagnoses((prev) =>
+      prev.map((d) => {
+        if (d.topicId !== topicId) return d;
+        let newStatus = d.status;
+        if (d.questionsAttempted < minConfidence) {
+          newStatus = 'insufficient_data';
+        } else if (d.score < weakMax) {
+          newStatus = 'weak';
+        } else if (d.score < mediumMax) {
+          newStatus = 'medium';
+        } else {
+          newStatus = 'strong';
+        }
+        return { ...d, status: newStatus };
+      })
+    );
   };
 
   const submitQuizAttempt = (attempt: QuizAttempt) => {
     setQuizzes((prev) => [attempt, ...prev]);
 
-    // Recalculate topic scores and status based on attempt answers
+    // Recalculate topic scores, diagnoses, misconceptions, and citations synchronously
     if (attempt.answers && attempt.questions.length > 0) {
-      // Group attempt questions by topic
-      const topicStats: Record<string, { totalScore: number; count: number; mistakes: string[] }> = {};
-      
-      attempt.questions.forEach((q) => {
-        const ans = attempt.answers?.[q.id];
-        if (!topicStats[q.topicId]) {
-          topicStats[q.topicId] = { totalScore: 0, count: 0, mistakes: [] };
-        }
-        if (ans) {
-          topicStats[q.topicId].totalScore += ans.score;
-          topicStats[q.topicId].count += 1;
-          if (!ans.isCorrect && ans.aiFeedback) {
-            topicStats[q.topicId].mistakes.push(ans.aiFeedback);
-          }
-        }
-      });
-
-      // Update topics state
-      setTopics((prevTopics) =>
-        prevTopics.map((top) => {
-          const stats = topicStats[top.id];
-          if (!stats) return top;
-
-          const updatedAttempted = top.questionsAttempted + stats.count;
-          const attemptAvg = Math.round(stats.totalScore / stats.count);
-          // Weighted average or latest score
-          const updatedScore = Math.round((top.latestScore * top.questionsAttempted + stats.totalScore) / updatedAttempted);
-
-          let newStatus = top.status;
-          if (updatedAttempted < top.recommendedThresholds.minQuestionsForConfidence) {
-            newStatus = 'insufficient_data';
-          } else if (updatedScore < top.recommendedThresholds.weakMax) {
-            newStatus = 'weak';
-          } else if (updatedScore < top.recommendedThresholds.mediumMax) {
-            newStatus = 'medium';
-          } else {
-            newStatus = 'strong';
-          }
-
-          return {
-            ...top,
-            questionsAttempted: updatedAttempted,
-            latestScore: updatedScore,
-            status: newStatus,
-          };
-        })
+      const { updatedTopics, updatedDiagnoses } = processQuizAttemptForTopics(
+        topics,
+        diagnoses,
+        attempt
       );
 
-      // Trigger automatic revision plan re-optimization
+      setTopics(updatedTopics);
+      setDiagnoses(updatedDiagnoses);
+
+      // Trigger automatic revision plan re-optimization with updated topics
       setTimeout(() => recalculateRevisionPlan(), 50);
     }
   };

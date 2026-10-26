@@ -19,7 +19,7 @@ import { useApp } from '@/lib/context/AppContext';
 import { formatDate, getStatusBadgeInfo } from '@/lib/utils';
 
 export default function AnalyticsPage() {
-  const { quizzes, topics, revisionPlan } = useApp();
+  const { quizzes, topics, revisionPlan, diagnoses } = useApp();
 
   const completedQuizzes = quizzes.filter((q) => q.status === 'completed');
   const averageScore = completedQuizzes.length > 0
@@ -150,41 +150,36 @@ export default function AnalyticsPage() {
             </div>
 
             <div className="mt-4 space-y-3">
-              <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-3.5 space-y-1">
-                <div className="flex items-center justify-between text-xs text-emerald-800 font-bold">
-                  <span>Transformers: Scaled Attention</span>
-                  <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full text-[10px]">
-                    Mastered (+15% Growth)
-                  </span>
-                </div>
-                <p className="text-xs text-emerald-950 leading-relaxed">
-                  Demonstrated clear mathematical derivation of Query-Key-Value projection matrices and softmax temperature scaling.
-                </p>
-              </div>
+              {topics.map((t) => {
+                const badge = getStatusBadgeInfo(t.status);
+                const diagnosis = diagnoses.find((d) => d.topicId === t.id);
+                const isInsufficient = t.status === 'insufficient_data';
 
-              <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-3.5 space-y-1">
-                <div className="flex items-center justify-between text-xs text-amber-800 font-bold">
-                  <span>RNN: LSTM Forget & Input Gates</span>
-                  <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full text-[10px]">
-                    Moderate Retention (65%)
-                  </span>
-                </div>
-                <p className="text-xs text-amber-950 leading-relaxed">
-                  Basic sequential memory understood, but gradient flow distinction between hidden state h_t and cell state C_t requires reinforcement.
-                </p>
-              </div>
-
-              <div className="rounded-xl border border-rose-200 bg-rose-50/50 p-3.5 space-y-1">
-                <div className="flex items-center justify-between text-xs text-rose-800 font-bold">
-                  <span>CNN: Spatial 2D Output Formula</span>
-                  <span className="bg-rose-100 text-rose-800 px-2 py-0.5 rounded-full text-[10px]">
-                    Critical Gap (40%)
-                  </span>
-                </div>
-                <p className="text-xs text-rose-950 leading-relaxed">
-                  Targeted remediation priority: O = ((W - K + 2P)/S) + 1. Scheduled for Day 1 in revision plan.
-                </p>
-              </div>
+                return (
+                  <div
+                    key={t.id}
+                    className={`rounded-xl border p-3.5 space-y-1 ${badge.bgSubtle} ${badge.borderColor}`}
+                  >
+                    <div className="flex items-center justify-between text-xs font-bold">
+                      <span className="text-slate-900">{t.name}</span>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${badge.badgeClass}`}>
+                        {isInsufficient ? 'Insufficient Data' : `${badge.label} (${t.latestScore}%)`}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-700 leading-relaxed">
+                      {diagnosis?.reason ||
+                        (isInsufficient
+                          ? `Only ${t.questionsAttempted} question attempted. Diagnostic assessment needed to establish proficiency.`
+                          : `Evaluated across ${t.questionsAttempted} questions with an average score of ${t.latestScore}%.`)}
+                    </p>
+                    {diagnosis?.sourceReferences && diagnosis.sourceReferences.length > 0 && (
+                      <p className="text-[10px] text-slate-500 pt-0.5 font-medium truncate">
+                        Citation: {diagnosis.sourceReferences[0].sectionTitle} ({diagnosis.sourceReferences[0].documentTitle})
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
