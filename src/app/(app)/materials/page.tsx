@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '@/lib/context/AppContext';
 import { UploadedDocument, DocumentChunk } from '@/lib/types';
-import { chunkTextWithMetadata } from '@/lib/rag/chunking';
+import { chunkTextWithMetadata, chunkPagesWithMetadata } from '@/lib/rag/chunking';
 import { formatBytes, formatDate } from '@/lib/utils';
 import { SAMPLE_DOCUMENTS, SAMPLE_CHUNKS } from '@/lib/demo/sample-data';
 
@@ -54,24 +54,62 @@ export default function MaterialsPage() {
 
     try {
       let extractedText = '';
+      let pageData: { text: string; num: number }[] = [];
 
-      if (file.type === 'text/plain' || file.name.endsWith('.txt') || file.name.endsWith('.md')) {
-        extractedText = await file.text();
-      } else {
-        // For uploaded PDFs in browser environment, read as text or generate grounded sample text
-        extractedText = `Document: ${file.name}\n\n` +
-          `Module 1: Introduction to ${file.name.replace(/\.[^/.]+$/, '')} Principles and Architectures.\n` +
-          `Section 1.1: Foundations and Mathematical Formulations.\n` +
-          `In this study material, fundamental equations, hyperparameter tuning, layer representations, and optimization constraints are thoroughly analyzed.\n\n` +
-          `Section 1.2: Diagnostic Evaluation Criteria.\n` +
-          `Students must understand boundary conditions, dimension transformations, and forward/backward propagation behaviors to achieve conceptual mastery.`;
+      // 1. Send file to /api/materials/extract for real PDF/text parsing
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const res = await fetch('/api/materials/extract', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          extractedText = data.text || '';
+          pageData = data.pages || [];
+        }
+      } catch (extractErr) {
+        console.warn('API extraction failed, attempting client fallback:', extractErr);
       }
 
-      // Chunk the extracted text using semantic overlap
-      const newChunks = chunkTextWithMetadata(extractedText, docId, file.name, {
-        chunkSize: 450,
-        overlap: 80,
-      });
+      // 2. Client-side fallback if server extract returned empty
+      if (!extractedText.trim()) {
+        if (file.type === 'text/plain' || file.name.endsWith('.txt') || file.name.endsWith('.md')) {
+          extractedText = await file.text();
+        } else {
+          try {
+            const raw = await file.text();
+            const printable = raw.match(/[A-Za-z0-9\s.,!?:;\-()'"\/]{4,}/g);
+            if (printable && printable.length > 5) {
+              extractedText = printable.join(' ');
+            }
+          } catch {
+            // keep empty
+          }
+        }
+      }
+
+      // If still empty (e.g. non-text binary), provide clean message
+      if (!extractedText.trim()) {
+        throw new Error('Unable to extract text from the file. Please ensure the PDF contains selectable text (not scanned images), or upload notes as .txt or .md.');
+      }
+
+      // 3. Chunk the extracted text using semantic overlap and page preservation
+      let newChunks: DocumentChunk[] = [];
+      if (pageData.length > 0 && pageData.some((p) => p.text.trim().length > 0)) {
+        newChunks = chunkPagesWithMetadata(pageData, docId, file.name, {
+          chunkSize: 450,
+          overlap: 80,
+        });
+      } else {
+        newChunks = chunkTextWithMetadata(extractedText, docId, file.name, {
+          chunkSize: 450,
+          overlap: 80,
+        });
+      }
 
       const newDoc: UploadedDocument = {
         id: docId,
@@ -83,11 +121,11 @@ export default function MaterialsPage() {
         uploadedAt: new Date().toISOString(),
         status: 'ready',
         chunkCount: newChunks.length,
-        extractedTextPreview: extractedText.slice(0, 200) + '...',
+        extractedTextPreview: extractedText.slice(0, 240) + '...',
       };
 
       addDocument(newDoc, newChunks);
-      setSuccessMessage(`Successfully uploaded "${file.name}" and extracted ${newChunks.length} RAG chunks with page citations!`);
+      setSuccessMessage(`Successfully uploaded "${file.name}" and extracted ${newChunks.length} RAG chunks from ${pageData.length || 1} page(s) with verifiable citations!`);
     } catch (err: any) {
       setUploadError(`Failed to process document: ${err.message || 'Unknown error'}`);
     } finally {

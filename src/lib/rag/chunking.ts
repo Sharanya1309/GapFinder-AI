@@ -86,6 +86,39 @@ export function chunkTextWithMetadata(
   return chunks;
 }
 
+export function chunkPagesWithMetadata(
+  pages: { text: string; num: number }[],
+  documentId: string,
+  sourceDocument: string,
+  options: ChunkOptions = {}
+): DocumentChunk[] {
+  if (!pages || pages.length === 0) return [];
+
+  const allChunks: DocumentChunk[] = [];
+  let globalChunkIndex = 1;
+
+  for (const page of pages) {
+    const pageText = (page.text || '').trim();
+    if (!pageText) continue;
+
+    const pageChunks = chunkTextWithMetadata(pageText, documentId, sourceDocument, options);
+    for (const chunk of pageChunks) {
+      allChunks.push({
+        ...chunk,
+        id: `chunk-${documentId}-${globalChunkIndex}`,
+        chunkIndex: globalChunkIndex,
+        metadata: {
+          ...chunk.metadata,
+          pageNumber: page.num,
+        },
+      });
+      globalChunkIndex += 1;
+    }
+  }
+
+  return allChunks;
+}
+
 export function inferTopicTag(content: string): string {
   const lower = content.toLowerCase();
   if (lower.includes('convolution') || lower.includes('cnn') || lower.includes('receptive field') || lower.includes('filter') || lower.includes('stride')) {
@@ -105,3 +138,4 @@ export function inferTopicTag(content: string): string {
   }
   return 'general';
 }
+

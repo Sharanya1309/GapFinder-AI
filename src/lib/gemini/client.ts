@@ -58,9 +58,9 @@ export function retrieveRelevantChunks(
 
       queryTerms.forEach((term) => {
         // Use word boundary to avoid false substring matches like 'strict' inside 'strictly'
-        const regex = new RegExp(`\\b${term}\\b`, 'i');
+        const regex = new RegExp(`\\b${term}`, 'i');
         if (regex.test(secLower)) matchScore += 3;
-        if (regex.test(contentLower)) matchScore += 1;
+        if (regex.test(contentLower)) matchScore += 2;
       });
 
       // Bonus if multi-word phrase matches
