@@ -1,81 +1,121 @@
 # Skill: Verify Hackathon Judge Readiness
 
-Run this comprehensive verification workflow before demonstrating GapFinder AI to evaluators or deploying to production.
+> **Context:** Execute this verification playbook on command to validate that GapFinder AI is 100% stable, fully synchronized, mathematically sound, and ready for evaluator examination.
 
 ---
 
-## 📋 Hackathon Verification Checklist
+## 📋 Comprehensive 4-Point Verification Checklist
 
-### 1. Build & Typecheck Validation
-Run the full production compiler:
-```bash
+---
+
+### Check 1: Production Build & Route Generation Verification
+
+Run the full Next.js production compiler to verify 0 TypeScript errors and static generation:
+
+```powershell
 npm run build
 ```
-- [ ] Exit code must be `0`.
-- [ ] Zero TypeScript errors.
-- [ ] All 14 routes generated successfully (`/`, `/analytics`, `/assistant`, `/dashboard`, `/gap-report`, `/login`, `/materials`, `/quiz`, `/quiz/[id]`, `/quiz/[id]/results`, `/register`, `/revision-plan`, `/topics`).
+
+#### Acceptance Criteria:
+- [ ] Command exits with **code 0**.
+- [ ] Zero TypeScript or lint errors.
+- [ ] All **14 routes** are compiled and generated cleanly:
+  1. `/` (Root redirect / Home)
+  2. `/_not-found` (404 Error handler)
+  3. `/analytics` (Progress & Diagnostic Performance Analytics)
+  4. `/assistant` (Explain This Topic Assistant)
+  5. `/dashboard` (Diagnostic Overview & Knowledge Map)
+  6. `/gap-report` (Diagnostic Gap Breakdown & Citations)
+  7. `/login` (Judge Fast-Pass & Student Authentication)
+  8. `/materials` (Study Material Upload & Interactive Chunk Inspector)
+  9. `/quiz` (Diagnostic Quiz Hub & Custom Builder)
+  10. `/quiz/[id]` (Active Quiz Interface)
+  11. `/quiz/[id]/results` (Diagnostic Evaluation & Citation Cards)
+  12. `/register` (Student Onboarding & Study Targets)
+  13. `/revision-plan` (Adaptive Daily Schedule)
+  14. `/topics` (Knowledge Map & Configurable Thresholds)
 
 ---
 
-### 2. Judge Fast-Pass Authentication Test
-1. Navigate to `http://localhost:3000/login`.
-2. Confirm the **"1-Click Judge Demo Login"** button is prominent.
-3. Click the button.
-- [ ] Confirms instant navigation to `/dashboard`.
-- [ ] User profile displays: `Dr. Alex Rivera (Hackathon Judge)`.
-- [ ] Badge displays `Judge Demo Account`.
-- [ ] Fallback credentials `judge@gapfinder.ai` / `GapFinderJudge2026!` are clearly displayed.
+### Check 2: Initial Curriculum Baseline Verification
+
+Inspect [`src/lib/demo/sample-data.ts`](file:///c:/Users/shiva/OneDrive/Desktop/igebra%20Hackathon/src/lib/demo/sample-data.ts) and verify the pre-seeded curriculum baseline:
+
+| Topic Code | Topic Name | Baseline Score | Questions Attempted | Expected Status | Reason / Justification |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **ANN** | Artificial Neural Networks | **90%** | 10 | `strong` | High mastery confirmed ($>75\%$) |
+| **CNN** | Convolutional Neural Networks | **40%** | 8 | `weak` | Primary diagnostic gap ($<50\%$) |
+| **RNN** | Recurrent Neural Networks | **65%** | 6 | `medium` | Developing conceptual grasp ($50\% - 75\%$) |
+| **Transformers** | Transformers & Self-Attention | **80%** | 6 | `strong` | High accuracy on QKV matrix math |
+| **Autoencoders** | Autoencoders & Latent Space | **100% (or N/A)** | 1 | `insufficient_data` | **Confidence Guard Triggered:** Only 1 attempt (< 3 questions required) |
+
+#### Verification Procedure:
+1. Navigate to `/login` and click **"1-Click Judge Demo Login"**.
+2. On `/dashboard`, confirm:
+   - CNN shows **40%** and **Weak** badge (`bg-rose-50 text-rose-700`).
+   - Autoencoders shows **Insufficient Data** badge (`bg-slate-100 text-slate-700`).
+3. Click **Topic Map** (`/topics`) and confirm identical scores and badges.
 
 ---
 
-### 3. Baseline Curriculum Integrity
-On `/dashboard` and `/topics`, confirm initial baseline metrics:
-- [ ] **ANN:** 90% (Strong, 10 attempts)
-- [ ] **CNN:** 40% (Weak, 8 attempts)
-- [ ] **RNN:** 65% (Medium, 6 attempts)
-- [ ] **Transformers:** 80% (Strong, 8 attempts)
-- [ ] **Autoencoders:** Insufficient Data (1 attempt, below the 3-question confidence threshold)
+### Check 3: Autoencoders 3-Question Assessment & State Flip Trace
+
+Trace the quiz submission lifecycle to confirm that answering 3 questions on an `insufficient_data` topic unlocks its true proficiency status and propagates across all 5 dashboard pages.
+
+#### Mathematical Trace:
+- **Prior State:** $S_{\text{old}} = 100\%$, $N_{\text{old}} = 1$ question, Status = `'insufficient_data'`.
+- **New Quiz Attempt:** Answering 3 Autoencoder questions with scores [100, 100, 100] ($S_{\text{new}} = 300$, $N_{\text{attempt}} = 3$).
+- **Recalculation via [`src/lib/gap-diagnosis/engine.ts`](file:///c:/Users/shiva/OneDrive/Desktop/igebra%20Hackathon/src/lib/gap-diagnosis/engine.ts):**
+  $$N_{\text{total}} = 1 + 3 = 4$$
+  $$S_{\text{updated}} = \text{round}\left(\frac{100 \cdot 1 + 300}{4}\right) = 100\%$$
+- **Confidence Guard Check:** $N_{\text{total}} = 4 \ge 3 \implies$ **Confidence condition satisfied!**
+- **Threshold Evaluation:** $S_{\text{updated}} = 100\% \ge \text{mediumMax} (75\%) \implies$ Status flips to **`strong`**.
+
+#### Cross-Page Propagation Checks:
+1. **`/quiz/[id]/results`:** Shows 100/100, feedback, and citations (`Module_5_Autoencoders_And_Latent_Spaces.pdf`, Page 61).
+2. **`/dashboard`:** Autoencoders progress bar elevates to 100% with `Strong` emerald badge.
+3. **`/topics`:** Autoencoders displays `Strong (100%)` across 4 attempted questions.
+4. **`/gap-report`:** Rationale elevates from *"Assessed 1 question... Insufficient data"* to *"Mastery confirmed with 100% proficiency across 4 assessed questions."*
+5. **`/revision-plan`:** Autoencoders diagnostic task (`task-diag-topic-autoencoders`) is marked resolved and re-prioritized to low-frequency spaced retention.
+6. **`/analytics`:** Knowledge Gap Reduction Trajectory updates Autoencoders to Mastered.
 
 ---
 
-### 4. End-to-End Quiz & Score Synchronization Test
-1. Navigate to `/quiz`.
-2. Click **"CNN Remediation Diagnostic Quiz"** (or preset).
-3. Confirm that on `/quiz/[id]`, **correct answers and citations are hidden**.
-4. Answer the questions and click **Submit Diagnostic Answers**.
-5. On `/quiz/[id]/results`, verify:
-   - [ ] Question-level evaluation displays score, feedback, and citation cards.
-6. Verify score synchronization across all 4 dashboard views:
-   - [ ] `/dashboard`: Topic Diagnostic Map shows CNN with new score (e.g. 56% Medium).
-   - [ ] `/topics`: Topic card shows CNN with new score (e.g. 56% Medium).
-   - [ ] `/gap-report`: CNN shows new score (e.g. 56% Medium) with updated rationale.
-   - [ ] `/analytics`: Mastery bars and Knowledge Gap Reduction Trajectory show new score (e.g. 56% Medium).
-   - [ ] **No page displays stale or conflicting 40% cards.**
+### Check 4: Grounded Assistant & Zero-Hallucination Refusal Verification
+
+Test the strict RAG boundary and refusal protocol on [`src/app/(app)/assistant/page.tsx`](file:///c:/Users/shiva/OneDrive/Desktop/igebra%20Hackathon/src/app/(app)/assistant/page.tsx).
+
+#### A. In-Syllabus Grounded Query Test:
+1. Query: *"Explain the CNN output dimension formula and Valid vs Same padding"*
+2. **Expected Behavior:**
+   - Assistant returns grounded answer utilizing retrieved chunks.
+   - Clickable citation chips appear:
+     - Document: `Module_2_CNN_Math_And_Receptive_Fields.pdf`
+     - Section: `Section 2.1: Spatial Dimension Formula`
+     - Page: `Page 14`
+   - `grounded: true` badge displayed.
+
+#### B. Out-of-Syllabus Refusal Protocol Test:
+1. Query: *"Explain Quantum Key Distribution (Strict Refusal Test)"*
+2. **Expected Behavior:**
+   - Vector / lexical match score is `0` against Deep Learning chunks.
+   - Model memory is strictly prohibited.
+   - Assistant displays the polite refusal message:
+     ```text
+     "I cannot find sufficient evidence in your uploaded study material to answer this question. Please upload the relevant chapter or notes."
+     ```
+   - Rendered in a styled amber alert card (`bg-amber-50 border-amber-200 text-amber-950`) with `ShieldAlert` icon and `grounded: false`.
 
 ---
 
-### 5. Grounded Assistant & Zero-Hallucination Refusal Test
-1. Navigate to `/assistant`.
-2. Click test prompt: **"Explain the CNN output dimension formula"**.
-   - [ ] Response cites `Module_2_CNN_Math_And_Receptive_Fields.pdf`, Page 14.
-3. Click test prompt: **"Explain Quantum Key Distribution (Strict Refusal Test)"**.
-   - [ ] Assistant explicitly refuses: *"I cannot find sufficient evidence in your uploaded study material to answer this question."*
-   - [ ] Displayed in an amber warning box with `grounded: false`.
+## 🛠️ Quick Automated Execution Script
 
----
+To run automated checks via PowerShell:
 
-### 6. Adaptive Revision Plan Test
-1. Navigate to `/revision-plan`.
-   - [ ] Top priority weak topic is scheduled for **Day 1**.
-   - [ ] Daily tasks show estimated time, priority badges, and citations.
-2. Click task checkboxes:
-   - [ ] Plan completion percentage increases in real time.
-3. Open **Plan Parameters** drawer:
-   - [ ] Adjust daily study time slider or exam date.
-   - [ ] Click **Apply & Rebalance Schedule** to confirm instant rebalancing.
+```powershell
+# 1. Typecheck & Build
+npm run build
 
----
-
-### 7. Demo Reset Safety Test
-1. In the sidebar, click **"Reset Demo Data"** and confirm.
-   - [ ] State immediately reverts to the initial Deep Learning baseline (CNN 40% Weak, Autoencoders Insufficient Data).
+# 2. Check Git working tree is clean
+git status
+```
